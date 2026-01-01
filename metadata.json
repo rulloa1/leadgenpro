@@ -1,0 +1,7 @@
+{
+  "name": "LeadGen Pro: Outreach Automation & Sales Tool",
+  "description": "A comprehensive suite for cold outreach management, featuring lead research powered by Google Maps grounding, personalized email generation, and formal proposal drafting.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
