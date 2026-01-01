@@ -64,27 +64,28 @@ const LeadResearch: React.FC<Props> = ({ onDraftProposal }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-      <div className="bg-white p-10 rounded-2xl border border-slate-200 shadow-xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full -mr-32 -mt-32"></div>
-        <h3 className="text-xl font-black text-slate-900 mb-8 relative">Step 1: Discover High-Intent Leads</h3>
+      <div className="bg-white p-10 rounded-3xl border border-slate-200 shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full -mr-40 -mt-40"></div>
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-red-500/5 rounded-full -ml-20 -mb-20"></div>
+        <h3 className="text-xl font-black text-slate-900 mb-8 relative uppercase tracking-tighter">Market Penetration Search</h3>
         
         <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
           <div className="flex flex-col space-y-3">
-            <label className="text-sm font-black text-blue-600 uppercase tracking-widest">Industry Keyword</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Vertical</label>
             <input 
               type="text" 
-              placeholder="e.g. Roofers, Dentists"
-              className="px-6 py-4 border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none text-xl font-bold text-slate-900 placeholder:text-slate-300 shadow-inner bg-slate-50/50 transition-all"
+              placeholder="e.g. Fintech, Medical"
+              className="px-6 py-4 border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:border-amber-500 outline-none text-xl font-bold text-slate-900 placeholder:text-slate-300 shadow-sm bg-slate-50/30 transition-all"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
           <div className="flex flex-col space-y-3">
-            <label className="text-sm font-black text-blue-600 uppercase tracking-widest">Target City</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Geo Target</label>
             <input 
               type="text" 
-              placeholder="e.g. Houston, Chicago"
-              className="px-6 py-4 border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none text-xl font-bold text-slate-900 placeholder:text-slate-300 shadow-inner bg-slate-50/50 transition-all"
+              placeholder="e.g. NYC, London"
+              className="px-6 py-4 border-2 border-slate-100 rounded-2xl focus:ring-4 focus:ring-amber-100 focus:border-amber-500 outline-none text-xl font-bold text-slate-900 placeholder:text-slate-300 shadow-sm bg-slate-50/30 transition-all"
               value={city}
               onChange={(e) => setCity(e.target.value)}
             />
@@ -93,66 +94,65 @@ const LeadResearch: React.FC<Props> = ({ onDraftProposal }) => {
             <button 
               type="submit"
               disabled={isLoading}
-              className={`w-full bg-blue-600 text-white font-black py-4 rounded-2xl transition-all shadow-lg text-lg uppercase tracking-widest flex items-center justify-center ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 hover:-translate-y-1 active:translate-y-0 shadow-blue-200'}`}
+              className={`w-full bg-black text-white font-black py-5 rounded-2xl transition-all shadow-xl text-xs uppercase tracking-[0.3em] flex items-center justify-center ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-900 hover:-translate-y-1 active:translate-y-0 shadow-slate-200'}`}
             >
               {isLoading ? (
                 <>
-                  <svg className="animate-spin h-6 w-6 mr-3 text-white" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Mapping...
+                  QUERYING...
                 </>
-              ) : 'Start Discovery'}
+              ) : 'EXECUTE SCAN'}
             </button>
           </div>
         </form>
       </div>
 
       {leads.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
           <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-black border-b border-slate-800">
               <tr>
-                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Business Name</th>
-                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Reputation & Tenure</th>
-                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Strategy & Services</th>
-                <th className="px-6 py-5 text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Actions</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Lead Profile</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Market Status</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Analysis</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-right">Drafting</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {leads.map((lead) => (
                 <tr key={lead.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-6 py-5 align-top">
-                    <div className="font-bold text-slate-900 text-lg leading-tight">{lead.name}</div>
-                    <div className="text-[10px] text-slate-400 mt-1 uppercase font-black tracking-widest">{lead.industry} • {lead.city}</div>
-                    <div className="mt-3">
-                      <a href={lead.mapsUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1.5 rounded-lg uppercase tracking-wider">Map View ↗</a>
+                  <td className="px-8 py-8 align-top">
+                    <div className="font-black text-slate-900 text-lg leading-tight group-hover:text-amber-600 transition-colors">{lead.name}</div>
+                    <div className="text-[10px] text-slate-400 mt-2 uppercase font-black tracking-widest">{lead.industry} • {lead.city}</div>
+                    <div className="mt-4">
+                      <a href={lead.mapsUrl} target="_blank" rel="noopener noreferrer" className="text-[9px] font-black text-amber-600 hover:text-amber-700 transition-colors bg-amber-50 px-3 py-2 rounded-xl uppercase tracking-widest border border-amber-100 shadow-sm">View Radar ↗</a>
                     </div>
                   </td>
-                  <td className="px-6 py-5 align-top">
-                    <div className="flex flex-col space-y-1">
-                      <div className="flex items-center text-amber-500 text-sm font-bold">
+                  <td className="px-8 py-8 align-top">
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center text-amber-500 text-sm font-black">
                         {'★'.repeat(Math.round(lead.rating || 0))}
-                        <span className="text-slate-400 ml-2 font-medium">({lead.rating?.toFixed(1)})</span>
+                        <span className="text-slate-400 ml-2 font-bold">({lead.rating?.toFixed(1)})</span>
                       </div>
-                      <div className="text-[11px] font-black text-emerald-600 uppercase tracking-tight mt-1">
-                        {lead.yearsInBusiness || 'Market Entry Pending'}
+                      <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mt-1 bg-emerald-50 w-max px-2 py-1 rounded-md border border-emerald-100">
+                        {lead.yearsInBusiness || 'Market Entry'}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5 align-top">
-                    <div className="space-y-4">
+                  <td className="px-8 py-8 align-top">
+                    <div className="space-y-6">
                       <div>
-                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Identified Gap:</div>
-                        <span className="inline-block px-3 py-1 bg-rose-50 text-rose-700 rounded-lg text-[10px] font-black uppercase tracking-wider border border-rose-100 shadow-sm">
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">CRITICAL GAP:</div>
+                        <span className="inline-block px-4 py-2 bg-red-50 text-red-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-100 shadow-sm">
                           {lead.gap}
                         </span>
                       </div>
                       <div>
-                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 flex justify-between items-center">
-                          <span>Service Offerings:</span>
-                          <span className="text-[8px] text-blue-500 font-black">SELECT TO BUNDLE</span>
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3 flex justify-between items-center">
+                          <span>STRATEGIC BUNDLING:</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {lead.recommendedServices?.map((service, idx) => {
@@ -161,10 +161,10 @@ const LeadResearch: React.FC<Props> = ({ onDraftProposal }) => {
                               <button 
                                 key={idx}
                                 onClick={() => toggleService(lead.id, service)}
-                                className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all shadow-sm border ${
+                                className={`px-3 py-2 rounded-xl text-[9px] font-black transition-all shadow-sm border ${
                                   isSelected 
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-blue-200' 
-                                    : 'bg-white border-slate-200 text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600'
+                                    ? 'bg-amber-500 text-white border-amber-600 shadow-amber-900/20' 
+                                    : 'bg-white border-slate-200 text-slate-500 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-600'
                                 }`}
                               >
                                 {isSelected ? '✓ ' : '+ '}{service}
@@ -175,28 +175,28 @@ const LeadResearch: React.FC<Props> = ({ onDraftProposal }) => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5 align-top">
-                    <div className="flex flex-col space-y-3">
+                  <td className="px-8 py-8 align-top text-right">
+                    <div className="flex flex-col space-y-4 items-end">
                       {lead.personalizedHook ? (
-                        <div className="bg-slate-900 text-white p-5 rounded-2xl text-[11px] font-medium italic leading-relaxed shadow-xl relative group-hover:-translate-y-1 transition-transform border border-slate-800">
-                          <div className="absolute -top-2 -left-2 bg-blue-500 text-[8px] font-black px-2 py-1 rounded uppercase tracking-widest shadow-md">AI Strategy</div>
+                        <div className="bg-black text-white p-6 rounded-3xl text-[11px] font-bold italic leading-relaxed shadow-2xl relative max-w-[240px] border-t-4 border-amber-500 text-left">
+                          <div className="absolute -top-3 right-4 bg-red-600 text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-[0.2em] shadow-lg">AI Payload</div>
                           "{lead.personalizedHook}"
                         </div>
                       ) : (
                         <button 
                           onClick={() => handleGenerateHook(lead.id)}
                           disabled={generatingHookId === lead.id}
-                          className="text-[10px] bg-white border-2 border-slate-100 text-slate-900 font-black px-5 py-2.5 rounded-2xl hover:border-blue-400 hover:text-blue-600 transition-all flex items-center justify-center shadow-md uppercase tracking-widest active:scale-95"
+                          className="text-[10px] bg-white border-2 border-slate-200 text-slate-900 font-black px-6 py-3 rounded-2xl hover:border-amber-500 hover:text-amber-600 transition-all shadow-md uppercase tracking-[0.2em]"
                         >
-                          {generatingHookId === lead.id ? 'Drafting...' : '✨ Create Hook'}
+                          {generatingHookId === lead.id ? 'ENCRYPTING...' : '✨ GENERATE HOOK'}
                         </button>
                       )}
                       
                       <button 
                         onClick={() => onDraftProposal?.(lead, selectedServicesMap[lead.id] || [])}
-                        className="text-[10px] bg-emerald-600 text-white font-black px-5 py-2.5 rounded-2xl hover:bg-emerald-700 transition-all flex items-center justify-center shadow-lg shadow-emerald-100 uppercase tracking-widest active:scale-95"
+                        className="text-[10px] bg-black text-white font-black px-8 py-4 rounded-2xl hover:bg-slate-900 transition-all flex items-center justify-center shadow-xl shadow-slate-200 uppercase tracking-[0.3em] active:scale-95 border border-slate-800"
                       >
-                        📄 Draft Proposal
+                        📄 DRAFT AGREEMENT
                       </button>
                     </div>
                   </td>
@@ -208,10 +208,10 @@ const LeadResearch: React.FC<Props> = ({ onDraftProposal }) => {
       )}
 
       {leads.length === 0 && !isLoading && (
-        <div className="text-center py-24 bg-white rounded-2xl border-2 border-dashed border-slate-200 shadow-inner">
-          <div className="text-7xl mb-6">🛰️</div>
-          <h4 className="text-2xl font-black text-slate-900">Map Scanner Offline</h4>
-          <p className="text-slate-400 max-w-sm mx-auto mt-2">Target a specific industry and region to begin deep-market scanning.</p>
+        <div className="text-center py-28 bg-white rounded-3xl border-2 border-dashed border-slate-200 shadow-inner">
+          <div className="text-8xl mb-6 select-none opacity-20">📡</div>
+          <h4 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Global Scanner Offline</h4>
+          <p className="text-slate-400 max-w-sm mx-auto mt-4 text-xs font-bold uppercase tracking-widest">Awaiting horizontal and vertical parameters for regional deep-scan.</p>
         </div>
       )}
     </div>
