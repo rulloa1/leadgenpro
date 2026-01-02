@@ -7,6 +7,7 @@ export interface ClientProposal {
   title: string;
   amount: string;
   status: 'Draft' | 'Sent' | 'Accepted' | 'Declined';
+  voiceAgent?: VoiceAgentConfig;
 }
 
 export interface Client {
@@ -28,12 +29,17 @@ export interface BusinessLead {
   industry: string;
   city: string;
   website?: string;
+  email?: string;
   rating?: number;
   gap?: string;
   yearsInBusiness?: string;
   personalizedHook?: string;
+  generatedEmail?: { subject: string; body: string };
   mapsUrl?: string;
   recommendedServices?: string[];
+  address?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface VoiceAgentConfig {

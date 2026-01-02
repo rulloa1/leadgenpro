@@ -36,6 +36,11 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
     }
   });
 
+  // Email State
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailDraft, setEmailDraft] = useState({ to: '', subject: '', body: '' });
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
   useEffect(() => {
     const saved = localStorage.getItem('lgp_clients');
     let clientList: Client[] = [];
@@ -46,17 +51,47 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
 
     if (prefillLeadData) {
       const { lead, services } = prefillLeadData;
+      
+      const getServiceDetails = (serviceName: string) => {
+        const lower = serviceName.toLowerCase();
+        if (lower.includes('website')) {
+          return {
+            detail: `Custom high-conversion design for ${lead.name}. Includes mobile-first architecture, speed optimization, and ${lead.industry}-specific landing pages.`,
+            price: '3500'
+          };
+        }
+        if (lower.includes('seo')) {
+          return {
+            detail: `Dominate "${lead.industry} in ${lead.city}" search results. Includes on-page optimization, citation building, and competitor backlink analysis.`,
+            price: '1500'
+          };
+        }
+        if (lower.includes('business profile') || lower.includes('gbp')) {
+          return {
+            detail: `Complete Google Business Profile optimization. We fix the "${lead.gap}" issue, manage reviews, and post weekly updates to drive local traffic.`,
+            price: '850'
+          };
+        }
+        return {
+          detail: `Implementation and optimization of ${serviceName} tailored for ${lead.industry} in ${lead.city}.`,
+          price: (Math.floor(Math.random() * 20) * 100 + 1000).toString()
+        };
+      };
+
       setProposal({
-        title: `${lead.name} Strategy`,
+        title: `${lead.name} Growth Strategy`,
         clientName: lead.name,
         objective: `Digital expansion for ${lead.name}`,
         solution: `Implement a high-performance growth stack to address existing ${lead.gap} and capitalize on ${lead.yearsInBusiness} of established reputation.`,
         problem: `Primary operational friction identified: ${lead.gap}. Digital assets currently underperform compared to offline reputation.`,
-        deliverables: services.map(s => ({
-          title: s,
-          details: `Implementation and optimization of ${s} tailored for ${lead.industry} in ${lead.city}.`,
-          price: (Math.floor(Math.random() * 20) * 100 + 1000).toString()
-        })),
+        deliverables: services.map(s => {
+          const { detail, price } = getServiceDetails(s);
+          return {
+            title: s,
+            details: detail,
+            price: price
+          };
+        }),
         timeline: [
           { phase: 'Strategy & Setup', duration: 'Week 1', cost: '1500' },
           { phase: 'Live Launch', duration: 'Week 2-4', cost: '2500' }
@@ -148,19 +183,6 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
     updateField('totalInvestment', total.toString());
   };
 
-  const handleAddTimeline = () => {
-    updateField('timeline', [...proposal.timeline, { phase: '', duration: '', cost: '0' }]);
-  };
-
-  const handleRemoveTimeline = (index: number) => {
-    updateField('timeline', proposal.timeline.filter((_, i) => i !== index));
-  };
-
-  const handleTimelineChange = (index: number, field: string, value: string) => {
-    const newList = proposal.timeline.map((item, i) => i === index ? { ...item, [field]: value } : item);
-    updateField('timeline', newList);
-  };
-
   const handleSaveProposal = () => {
     if (!proposal.clientId) {
       alert("Please select a client to save this proposal to their history.");
@@ -177,7 +199,8 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
             date: new Date().toISOString().split('T')[0],
             title: proposal.title,
             amount: proposal.totalInvestment,
-            status: 'Draft'
+            status: 'Draft',
+            voiceAgent: proposal.voiceAgent.enabled ? proposal.voiceAgent : undefined
           };
           return { ...c, proposals: [newProp, ...c.proposals] };
         }
@@ -189,25 +212,69 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
     }
   };
 
+  const handlePrepareEmail = () => {
+    const client = clients.find(c => c.id === proposal.clientId);
+    const emailTo = client?.email || '';
+    
+    setEmailDraft({
+      to: emailTo,
+      subject: `Proposal: ${proposal.title} for ${proposal.clientName}`,
+      body: `Hi ${proposal.clientName.split(' ')[0]},\n\nPlease find attached the proposal for the ${proposal.title} we discussed.\n\nWe've outlined a strategy to address the ${proposal.problem.substring(0, 50)}... and achieve the growth targets identified.\n\nTotal Investment: $${proposal.totalInvestment}\n\nLet me know if you have any questions.\n\nBest,\n[Your Name]`
+    });
+    setEmailModalOpen(true);
+  };
+
+  const handleSendEmail = async () => {
+    setIsSendingEmail(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setIsSendingEmail(false);
+    setEmailModalOpen(false);
+    alert(`Proposal sent to ${emailDraft.to}`);
+  };
+
+  const handleOpenMailApp = () => {
+    const mailtoLink = `mailto:${emailDraft.to}?subject=${encodeURIComponent(emailDraft.subject)}&body=${encodeURIComponent(emailDraft.body)}`;
+    window.open(mailtoLink, '_blank');
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
       <style>{`
-        .doc-body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .doc-header { border-bottom: 3px solid #2563eb; padding: 40px; background: white; }
-        .doc-title { font-size: 28px; color: #1e293b; font-weight: 600; text-transform: uppercase; }
-        .doc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 30px; text-align: left; }
-        .meta-label { color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 600; }
-        .meta-value { color: #1e293b; font-size: 14px; }
-        .doc-section-h2 { font-size: 18px; color: #1e293b; margin: 25px 0 15px 0; padding: 10px; background: #f1f5f9; border-left: 4px solid #2563eb; font-weight: bold; text-align: left; }
-        .doc-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        .doc-th { background: #2563eb; color: white; padding: 12px; text-align: left; font-size: 14px; }
-        .doc-td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; text-align: left; }
-        .doc-total-row { font-weight: bold; background: #f1f5f9; font-size: 16px; border-top: 2px solid #2563eb; }
-        .doc-signature-block { padding: 15px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; text-align: left; }
-        .doc-signature-field { border-bottom: 2px solid #94a3b8; height: 40px; margin: 15px 0; background: white; position: relative; }
-        .doc-marker { position: absolute; top: 10px; left: 10px; color: #2563eb; font-size: 10px; font-weight: bold; opacity: 0.5; }
-        .doc-card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 25px 0; }
-        .doc-val-card { text-align: center; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .doc-body { font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; color: #334155; background: white; }
+        .doc-header { padding: 60px 50px; background: #0f172a; color: white; position: relative; overflow: hidden; }
+        .doc-header::after { content: ''; position: absolute; top: 0; right: 0; width: 300px; height: 300px; background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%); transform: translate(50%, -50%); }
+        .doc-brand { font-size: 14px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #94a3b8; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center; }
+        .doc-title { font-size: 42px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 20px; background: linear-gradient(to right, #ffffff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .doc-subtitle { font-size: 16px; color: #94a3b8; font-weight: 500; margin-bottom: 40px; max-width: 600px; }
+        
+        .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; border-top: 1px solid #1e293b; padding-top: 40px; }
+        .doc-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: #64748b; font-weight: 700; margin-bottom: 8px; }
+        .doc-value { font-size: 16px; font-weight: 600; color: #f8fafc; }
+        
+        .doc-content { padding: 60px 50px; }
+        
+        .doc-section { margin-bottom: 50px; }
+        .doc-h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 900; color: #0f172a; margin-bottom: 20px; display: flex; align-items: center; }
+        .doc-h2::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; margin-left: 20px; }
+        
+        .doc-p { font-size: 15px; color: #475569; margin-bottom: 20px; text-align: justify; }
+        
+        .doc-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+        .doc-th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; font-weight: 700; padding: 0 15px 10px 15px; }
+        .doc-row { background: #f8fafc; transition: transform 0.2s; page-break-inside: avoid; }
+        .doc-td { padding: 20px 15px; font-size: 14px; border: 1px solid #f1f5f9; border-width: 1px 0; }
+        .doc-td:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; border-left: 1px solid #f1f5f9; font-weight: 700; color: #0f172a; }
+        .doc-td:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; border-right: 1px solid #f1f5f9; text-align: right; font-weight: 700; color: #0f172a; }
+        
+        .doc-total { margin-top: 30px; text-align: right; padding: 30px; background: #0f172a; color: white; border-radius: 12px; }
+        .doc-total-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 5px; }
+        .doc-total-value { font-size: 32px; font-weight: 900; letter-spacing: -0.02em; color: #3b82f6; }
+        
+        .agent-card { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 16px; padding: 30px; margin: 30px 0; position: relative; overflow: hidden; }
+        .agent-card::before { content: 'AI ACTIVE'; position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); font-size: 9px; font-weight: 900; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.1em; }
+        
+        .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 80px; }
+        .sig-line { border-top: 1px solid #cbd5e1; padding-top: 15px; margin-top: 50px; display: flex; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; }
       `}</style>
 
       {prefillLeadData && (
@@ -272,7 +339,7 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
 
                 {proposal.voiceAgent.enabled && (
                   <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[9px] font-black text-emerald-600 uppercase mb-1">Agent Name</label>
                         <input type="text" className="w-full px-3 py-2 border border-emerald-100 rounded-xl bg-white text-xs font-bold" value={proposal.voiceAgent.name} onChange={e => updateVoiceAgent({ name: e.target.value })} placeholder="e.g. Maya" />
@@ -284,6 +351,15 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
                           <option value="Spanish">Spanish</option>
                           <option value="Bilingual">Bilingual</option>
                         </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-black text-emerald-600 uppercase mb-1">Monthly Cost ($)</label>
+                        <input 
+                          type="number" 
+                          className="w-full px-3 py-2 border border-emerald-100 rounded-xl bg-white text-xs font-bold" 
+                          value={proposal.voiceAgent.cost} 
+                          onChange={e => updateVoiceAgent({ cost: parseInt(e.target.value) || 0 })} 
+                        />
                       </div>
                     </div>
                     <div>
@@ -322,12 +398,18 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
                 ))}
               </div>
 
-              <div className="pt-6 border-t border-slate-100">
+              <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+                <button 
+                  onClick={handlePrepareEmail}
+                  className="bg-emerald-600 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-emerald-700 transition-all mb-4"
+                >
+                  Send Proposal ✉️
+                </button>
                 <button 
                   onClick={handleSaveProposal}
-                  className="w-full bg-slate-900 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all mb-4"
+                  className="bg-slate-900 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-black transition-all mb-4"
                 >
-                  Save Proposal to CRM
+                  Save to CRM
                 </button>
               </div>
             </div>
@@ -335,187 +417,175 @@ const ProposalView: React.FC<Props> = ({ initialClientId, prefillLeadData, onCle
         </div>
 
         {/* High Fidelity Preview */}
-        <div className="lg:col-span-7 bg-white shadow-[0_35px_60px_-15px_rgba(0,0,0,0.1)] rounded-none border border-slate-200 overflow-hidden doc-body mx-auto w-full max-w-[8.5in]">
+        <div className="lg:col-span-7 bg-white shadow-2xl rounded-sm overflow-hidden doc-body mx-auto w-full max-w-[8.5in] min-h-[11in]">
           <div className="doc-header">
-            <div className="flex justify-between items-start mb-12 text-left">
-              <div>
-                <div className="text-3xl font-black tracking-tighter">
-                  <span className="text-slate-900 uppercase">ROYS</span>
-                  <span className="text-amber-500 uppercase">COMPANY</span>
-                  <span className="text-red-600 uppercase">.COM</span>
-                </div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-[0.4em] font-black mt-2">Scale with Intelligence</div>
-              </div>
-              <div className="text-right text-[10px] text-slate-500 space-y-2 uppercase font-black tracking-widest">
-                <div className="text-slate-900 text-sm">Agreement For Services</div>
-                <div>Ref: {proposal.clientId ? proposal.clientId.toUpperCase() : 'NEW-MARKET'}-{new Date().getFullYear()}</div>
-                <div>Date: {new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-              </div>
-            </div>
-            
-            <div className="text-center py-14 border-y-2 border-slate-900 my-10">
-              <h1 className="doc-title mb-6 tracking-tighter !font-black !text-4xl">Service Partnership</h1>
-              <div className="text-4xl font-black text-blue-600 mb-4">{proposal.clientName}</div>
-              <div className="inline-block bg-slate-900 text-white px-8 py-2 rounded-full text-xs font-black uppercase tracking-[0.3em]">
-                {proposal.title}
-              </div>
-            </div>
-
-            <div className="doc-meta">
-              <div className="space-y-5">
-                <h3 className="text-xs font-black text-slate-900 border-b-2 border-slate-100 pb-2 uppercase tracking-widest">Partner Data</h3>
-                <div>
-                  <div className="meta-label">Client Entity</div>
-                  <div className="meta-value font-black text-xl text-slate-900">{proposal.clientName}</div>
-                </div>
-                <div>
-                  <div className="meta-label">Core Objective</div>
-                  <div className="meta-value font-bold text-slate-500 leading-tight">{proposal.objective}</div>
-                </div>
-              </div>
-              <div className="space-y-5">
-                <h3 className="text-xs font-black text-slate-900 border-b-2 border-slate-100 pb-2 uppercase tracking-widest">Deal Structure</h3>
-                <div>
-                  <div className="meta-label">Project Valuation</div>
-                  <div className="meta-value text-blue-600 font-black text-4xl">${proposal.totalInvestment}</div>
-                </div>
-                <div>
-                  <div className="meta-label">Deployment Windows</div>
-                  <div className="meta-value font-black text-slate-800 uppercase tracking-widest">Est. {proposal.timeline.length > 0 ? proposal.timeline.length * 2 : '8'} Weeks</div>
-                </div>
-              </div>
-            </div>
+             <div className="doc-brand">
+               <span>RoysCompany.com</span>
+               <span className="opacity-50">#PRO-{proposal.clientId ? proposal.clientId.toUpperCase() : 'DRAFT'}</span>
+             </div>
+             <h1 className="doc-title">{proposal.title}</h1>
+             <p className="doc-subtitle">Prepared exclusively for {proposal.clientName}</p>
+             
+             <div className="doc-grid">
+               <div>
+                 <div className="doc-label">Client Partner</div>
+                 <div className="doc-value">{proposal.clientName}</div>
+                 <div style={{fontSize: '12px', color: '#64748b', marginTop: '4px'}}>Authorized: {new Date().toLocaleDateString()}</div>
+               </div>
+               <div>
+                 <div className="doc-label">Project Scope</div>
+                 <div className="doc-value">{proposal.timeline.length} Phases</div>
+                 <div style={{fontSize: '12px', color: '#64748b', marginTop: '4px'}}>Est. Completion: 6 Weeks</div>
+               </div>
+             </div>
           </div>
-
-          <div className="px-16 py-12 bg-white text-left">
-            <div className="bg-slate-900 p-10 rounded-3xl mb-12 text-left relative overflow-hidden shadow-2xl">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full -mr-24 -mt-24"></div>
-              <h2 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.5em] mb-6">01. Strategic Summary</h2>
-              <p className="text-slate-100 text-lg leading-relaxed font-bold italic">
-                "{proposal.solution}"
-              </p>
-            </div>
-
-            <div className="doc-card-grid mb-12">
-              <div className="doc-val-card !border-2 !border-slate-100 !rounded-2xl py-6">
-                <div className="text-3xl font-black text-blue-600">15+</div>
-                <div className="text-[10px] text-slate-400 uppercase font-black mt-2 tracking-widest">Yrs Excellence</div>
-              </div>
-              <div className="doc-val-card !border-2 !border-slate-100 !rounded-2xl py-6">
-                <div className="text-3xl font-black text-emerald-500">99%</div>
-                <div className="text-[10px] text-slate-400 uppercase font-black mt-2 tracking-widest">Uptime Avg</div>
-              </div>
-              <div className="doc-val-card !border-2 !border-slate-100 !rounded-2xl py-6">
-                <div className="text-3xl font-black text-purple-500">API</div>
-                <div className="text-[10px] text-slate-400 uppercase font-black mt-2 tracking-widest">First Logic</div>
-              </div>
-              <div className="doc-val-card !border-2 !border-slate-100 !rounded-2xl py-6 shadow-lg shadow-rose-100">
-                <div className="text-3xl font-black text-rose-500">AI</div>
-                <div className="text-[10px] text-slate-400 uppercase font-black mt-2 tracking-widest">Deep Native</div>
+          
+          <div className="doc-content">
+            <div className="doc-section">
+              <div className="doc-h2">Executive Summary</div>
+              <p className="doc-p">{proposal.solution}</p>
+              <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 flex gap-6 mt-6">
+                <div className="flex-1">
+                  <div className="doc-label">Current State</div>
+                  <p className="text-sm text-slate-600 mt-2">{proposal.problem}</p>
+                </div>
+                <div className="w-px bg-slate-200"></div>
+                <div className="flex-1">
+                  <div className="doc-label">Target State</div>
+                  <p className="text-sm text-slate-600 mt-2">{proposal.objective}</p>
+                </div>
               </div>
             </div>
 
-            <h2 className="doc-section-h2 uppercase tracking-[0.3em] !bg-slate-900 !text-white !border-none !rounded-2xl text-center py-4 text-xs">Technical Scope of Work</h2>
+            <div className="doc-section">
+              <div className="doc-h2">Deliverables & Investment</div>
+              <table className="doc-table">
+                <thead>
+                  <tr>
+                    <th className="doc-th">Item Description</th>
+                    <th className="doc-th">Details</th>
+                    <th className="doc-th" style={{textAlign: 'right'}}>Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {proposal.deliverables.map((d, i) => (
+                     <tr key={i} className="doc-row">
+                       <td className="doc-td">{d.title}</td>
+                       <td className="doc-td" style={{color: '#64748b', fontWeight: 400}}>{d.details}</td>
+                       <td className="doc-td">${d.price}</td>
+                     </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             
-            <table className="doc-table mt-8">
-              <thead>
-                <tr>
-                  <th className="doc-th uppercase text-[10px] tracking-widest !bg-slate-100 !text-slate-500 !font-black border-none">Module</th>
-                  <th className="doc-th uppercase text-[10px] tracking-widest !bg-slate-100 !text-slate-500 !font-black border-none">Specifications</th>
-                  <th className="doc-th text-right uppercase text-[10px] tracking-widest !bg-slate-100 !text-slate-500 !font-black border-none">Investment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {proposal.deliverables.map((d, i) => (
-                  <tr key={i} className="hover:bg-slate-50 transition-colors">
-                    <td className="doc-td font-black text-slate-900 py-6">{d.title || 'Untitled Module'}</td>
-                    <td className="doc-td text-slate-500 text-xs font-medium leading-relaxed">{d.details || 'Technical implementation pending review.'}</td>
-                    <td className="doc-td text-right font-black text-slate-900 text-lg">${d.price || '0'}</td>
-                  </tr>
-                ))}
-                
-                {/* Voice Agent Implementation Block */}
-                {proposal.voiceAgent.enabled && (
-                  <tr className="bg-emerald-50/30 border-t-2 border-emerald-100">
-                    <td className="doc-td font-black text-emerald-700 py-8">
-                      <span className="block text-[8px] uppercase tracking-widest mb-1">Advanced AI Module</span>
-                      Voice Agent: {proposal.voiceAgent.name}
-                    </td>
-                    <td className="doc-td text-emerald-900/60 text-xs font-bold leading-relaxed">
-                      24/7 Multi-channel Appointment Setting.<br/> 
-                      Primary Scripting: {proposal.voiceAgent.greeting.substring(0, 50)}...
-                    </td>
-                    <td className="doc-td text-right font-black text-emerald-600 text-2xl">${proposal.voiceAgent.cost}</td>
-                  </tr>
-                )}
-
-                <tr className="doc-total-row !bg-slate-900 !text-white !rounded-b-2xl">
-                  <td colSpan={2} className="doc-td uppercase tracking-[0.4em] font-black text-xs py-8 px-6">Combined Project Valuation</td>
-                  <td className="doc-td text-right text-3xl font-black py-8 px-6">${proposal.totalInvestment}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* AI Callout Banner */}
             {proposal.voiceAgent.enabled && (
-              <div className="bg-gradient-to-br from-emerald-500 to-blue-600 rounded-[2.5rem] p-12 my-14 text-left relative shadow-2xl overflow-hidden group">
-                <div className="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-                <div className="relative z-10">
-                  <h3 className="text-white font-black text-3xl mb-4 flex items-center tracking-tighter">
-                    <span className="mr-4 text-4xl">🤖</span> AI CALL CAPTURE ENGINE
-                  </h3>
-                  <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl mb-8 border border-white/20">
-                    <div className="text-[10px] font-black text-white/50 uppercase mb-2 tracking-[0.3em]">Proprietary Greeting Protocol:</div>
-                    <p className="text-white text-lg font-bold italic leading-relaxed">"{proposal.voiceAgent.greeting}"</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-8">
-                    <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl text-center border border-white/10">
-                      <span className="block font-black text-white text-3xl mb-1 tracking-tighter">24/7</span>
-                      <span className="text-[10px] uppercase font-black text-white/50 tracking-[0.2em]">Response</span>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl text-center border border-white/10">
-                      <span className="block font-black text-white text-3xl mb-1 tracking-tighter">100%</span>
-                      <span className="text-[10px] uppercase font-black text-white/50 tracking-[0.2em]">Capture</span>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl text-center border border-white/10">
-                      <span className="block font-black text-white text-3xl mb-1 tracking-tighter">{proposal.voiceAgent.language === 'Bilingual' ? 'EN/ES' : 'NATIVE'}</span>
-                      <span className="text-[10px] uppercase font-black text-white/50 tracking-[0.2em]">Fluency</span>
-                    </div>
-                  </div>
+              <div className="agent-card">
+                <div style={{fontSize: '24px', fontWeight: 900, marginBottom: '10px'}}>Voice AI Integration</div>
+                <p style={{opacity: 0.9, fontSize: '14px', marginBottom: '20px', maxWidth: '80%'}}>
+                  Includes setup and deployment of <strong>{proposal.voiceAgent.name}</strong>, a {proposal.voiceAgent.language} autonomous agent for 24/7 lead capture.
+                </p>
+                <div style={{background: 'rgba(0,0,0,0.2)', padding: '15px', borderRadius: '10px', fontSize: '13px', fontStyle: 'italic'}}>
+                  "{proposal.voiceAgent.greeting}"
+                </div>
+                <div style={{marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '15px'}}>
+                  <span style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700}}>Monthly Infrastructure</span>
+                  <span style={{fontSize: '18px', fontWeight: 900}}>${proposal.voiceAgent.cost}/mo</span>
                 </div>
               </div>
             )}
 
-            <h2 className="doc-section-h2 uppercase tracking-[0.3em] mb-10">Signatures of Authorization</h2>
-            <div className="grid grid-cols-2 gap-16 mt-6">
-              <div className="doc-signature-block !bg-white border-b-4 border-slate-900 rounded-none !p-0">
-                <div className="text-[10px] font-black text-slate-300 mb-8 uppercase tracking-[0.4em] border-b border-slate-50 pb-2">Client Acceptance</div>
-                <div className="h-20 relative">
-                  <span className="absolute bottom-2 left-0 text-slate-200 text-xs italic">Signature of {proposal.clientName} Representative</span>
-                </div>
-                <div className="flex justify-between mt-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                  <div>Date of Execution</div>
-                  <div>Place of Execution</div>
-                </div>
-              </div>
-              <div className="doc-signature-block !bg-white border-b-4 border-blue-600 rounded-none !p-0">
-                <div className="text-[10px] font-black text-slate-300 mb-8 uppercase tracking-[0.4em] border-b border-slate-50 pb-2">Provider Authorization</div>
-                <div className="h-20 relative">
-                  <span className="absolute bottom-2 left-0 text-blue-600 text-xs font-black uppercase tracking-widest">Authorized by RoysCompany.com</span>
-                </div>
-                <div className="flex justify-between mt-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                  <div>Date of Execution</div>
-                  <div>Digital Hash: LGP-8832-X</div>
-                </div>
-              </div>
+            <div className="doc-total">
+              <div className="doc-total-label">Total Project Value</div>
+              <div className="doc-total-value">${proposal.totalInvestment}</div>
+              <div style={{fontSize: '11px', color: '#64748b', marginTop: '5px'}}>* Includes all setup fees and first month of AI infrastructure.</div>
             </div>
-
-            <div className="mt-20 pt-10 border-t-2 border-slate-100 text-center text-[9px] text-slate-400 uppercase tracking-[0.5em] font-black">
-              Verified Immutable Document • LeadGen Pro Automation Suite v1.1
+            
+            <div className="sig-grid">
+              <div>
+                <div style={{fontSize: '14px', fontWeight: 700, color: '#0f172a'}}>{proposal.clientName}</div>
+                <div className="sig-line">
+                  <span>Signature</span>
+                  <span>Date</span>
+                </div>
+              </div>
+               <div>
+                <div style={{fontSize: '14px', fontWeight: 700, color: '#0f172a'}}>RoysCompany.com</div>
+                <div className="sig-line">
+                  <span>Signature</span>
+                  <span>Date</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+       {/* Email Composer Modal */}
+       {emailModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+             <div className="bg-slate-50 border-b border-slate-100 p-4 flex justify-between items-center">
+               <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Send Proposal</h3>
+               <button onClick={() => setEmailModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+             </div>
+             
+             <div className="p-6 space-y-4">
+               <div>
+                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">To</label>
+                 <input 
+                   type="email" 
+                   value={emailDraft.to} 
+                   onChange={(e) => setEmailDraft({...emailDraft, to: e.target.value})}
+                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                   placeholder="client@company.com"
+                 />
+               </div>
+               <div>
+                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Subject</label>
+                 <input 
+                   type="text" 
+                   value={emailDraft.subject} 
+                   onChange={(e) => setEmailDraft({...emailDraft, subject: e.target.value})}
+                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                 />
+               </div>
+               <div>
+                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Message</label>
+                 <textarea 
+                   value={emailDraft.body} 
+                   onChange={(e) => setEmailDraft({...emailDraft, body: e.target.value})}
+                   className="w-full h-48 px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 focus:ring-2 focus:ring-emerald-500 outline-none resize-none leading-relaxed"
+                 />
+               </div>
+             </div>
+
+             <div className="bg-slate-50 border-t border-slate-100 p-4 flex justify-between items-center">
+                <button 
+                  onClick={handleOpenMailApp}
+                  className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-800 flex items-center"
+                >
+                  ↗ Open in Mail App
+                </button>
+                <div className="flex space-x-3">
+                   <button 
+                     onClick={() => setEmailModalOpen(false)}
+                     className="text-xs font-bold text-slate-500 px-4 py-2 hover:bg-slate-100 rounded-lg"
+                   >
+                     Cancel
+                   </button>
+                   <button 
+                     onClick={handleSendEmail}
+                     disabled={isSendingEmail}
+                     className="bg-emerald-600 text-white text-xs font-black px-6 py-2.5 rounded-xl hover:bg-emerald-700 transition-all shadow-lg flex items-center uppercase tracking-wider"
+                   >
+                     {isSendingEmail ? 'Sending...' : 'Send Proposal'}
+                   </button>
+                </div>
+             </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
