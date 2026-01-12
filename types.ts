@@ -40,6 +40,13 @@ export interface BusinessLead {
   address?: string;
   latitude?: number;
   longitude?: number;
+  analysisReport?: {
+    mobileScore: number;
+    seoScore: number;
+    speedScore: number;
+    techStack: string[];
+    criticalIssues: string[];
+  };
 }
 
 export interface VoiceAgentConfig {

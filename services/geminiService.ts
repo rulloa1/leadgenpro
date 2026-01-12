@@ -4,48 +4,47 @@ import { BusinessLead } from "../types";
 
 const API_KEY = process.env.API_KEY;
 
+/**
+ * Utility to extract JSON string from AI response which might contain markdown blocks or preamble.
+ */
+function extractJson(text: string): string {
+  // Try to find an array or object pattern
+  const match = text.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+  if (match) {
+    return match[0];
+  }
+  return text.replace(/```json|```/g, "").trim();
+}
+
 export const searchLeads = async (
   query: string, 
   location?: { latitude: number; longitude: number }, 
   mode: 'growth' | 'distressed' = 'growth',
   scope: 'bulk' | 'single' = 'bulk'
 ): Promise<BusinessLead[]> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY! });
+  if (!API_KEY) throw new Error("API Key is missing. Please ensure process.env.API_KEY is configured.");
+  
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
   
   let promptContext = "";
-  
   if (scope === 'single') {
-    // Single Business Audit Logic
     if (mode === 'distressed') {
-      promptContext = `Analyze the specific business "${query}". Act as a ruthless digital auditor. 
-      Identify 3 critical failures in their digital presence (e.g. website speed, bad reviews, lack of social, poor SEO).
-      The 'gap' field should be the most glaring weakness found.
-      The 'yearsInBusiness' should be estimated based on their history.
-      Suggest 3 repair-focused services to pitch them immediately.`;
+      promptContext = `Identify specific weaknesses for "${query}". Focus on digital failures like slow loading, poor mobile UX, or bad reviews. Return a detailed analysis of their current gaps.`;
     } else {
-      promptContext = `Analyze the specific business "${query}". Act as a high-end growth consultant.
-      Identify their "Digital Ceiling" - what is stopping them from scaling further? (e.g. lack of automation, poor ad funnel, no AI integration).
-      The 'gap' field should be this growth bottleneck.
-      The 'yearsInBusiness' should be estimated.
-      Suggest 3 high-ticket growth/optimization services.`;
+      promptContext = `Analyze growth opportunities for "${query}". Look for missing high-ticket features like AI automation, advanced SEO, or conversion funnels.`;
     }
   } else {
-    // Bulk Market Scan Logic
     if (mode === 'distressed') {
-      promptContext = `Find 5 ${query} businesses that specifically have a POOR digital presence. Look for ratings under 4.0, missing websites, or businesses that look outdated. 
-      For each, identify the specific "Digital Failure" (e.g. "No website", "Bad reviews", "Non-responsive"). 
-      The 'yearsInBusiness' should emphasize if they are established but neglecting digital (e.g. "20+ years, stuck in past").
-      Suggest 3 'Monthly Marketing Packages' (e.g. "Reputation Repair", "Website Rebuild", "Local SEO Fix").`;
+      promptContext = `Find 5 local ${query} businesses with POOR online presence (ratings < 4.0, no website, or outdated tech).`;
     } else {
-      promptContext = `Find 5 ${query} businesses. For each, identify a potential digital gap and analyze how long they have been in business based on their history or reputation (e.g., "Established 15+ years", "Since 2012", "Relatively New"). 
-      Also, suggest 3 highly relevant digital services (e.g., "Google Ads Management", "AI Appointment Setter", "Mobile Web Optimization") that would specifically fix their gap.`;
+      promptContext = `Find 5 local ${query} businesses that are successful but could scale further with better digital marketing or AI automation.`;
     }
   }
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
-    contents: `${promptContext}
-    IMPORTANT: Capture the specific address, extract the approximate latitude/longitude, and try to find a public contact email (e.g. info@domain.com) if available.`,
+    contents: `${promptContext} Provide name, industry, website, and a specific digital 'gap' for each. 
+    IMPORTANT: You must return a descriptive text summary of the results so I can process them.`,
     config: {
       tools: [{ googleMaps: {} }],
       toolConfig: {
@@ -63,9 +62,12 @@ export const searchLeads = async (
   
   const structurer = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Based on this search result: "${response.text}", list exactly ${scope === 'single' ? '1 business' : '5 businesses'} in JSON format.
+    contents: `Based on this raw data: "${response.text}", extract exactly ${scope === 'single' ? '1 business' : '5 businesses'} into the following JSON format.
+    Search Context: ${query}
+    
     Schema: Array<{ name: string, industry: string, city: string, website: string, email: string, gap: string, yearsInBusiness: string, recommendedServices: string[], address: string, latitude: number, longitude: number }>
-    Search context: ${query}`,
+    
+    If data is missing, provide a logical estimation based on the business type.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -77,14 +79,10 @@ export const searchLeads = async (
             industry: { type: Type.STRING },
             city: { type: Type.STRING },
             website: { type: Type.STRING },
-            email: { type: Type.STRING, description: "The public email address found, or a likely placeholder like info@domain.com" },
+            email: { type: Type.STRING },
             gap: { type: Type.STRING },
-            yearsInBusiness: { type: Type.STRING, description: "Analysis of how long they've been operating" },
-            recommendedServices: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING },
-              description: "List of 3 specific services to offer them" 
-            },
+            yearsInBusiness: { type: Type.STRING },
+            recommendedServices: { type: Type.ARRAY, items: { type: Type.STRING } },
             address: { type: Type.STRING },
             latitude: { type: Type.NUMBER },
             longitude: { type: Type.NUMBER },
@@ -96,12 +94,12 @@ export const searchLeads = async (
   });
 
   try {
-    const data = JSON.parse(structurer.text);
+    const rawJson = extractJson(structurer.text || "[]");
+    const data = JSON.parse(rawJson);
     return data.map((item: any, index: number) => {
-      // Fallback logic for email if the model returns 'null' string or empty
       let finalEmail = item.email;
       if (!finalEmail || finalEmail === 'null' || !finalEmail.includes('@')) {
-        const domain = item.website ? item.website.replace('https://', '').replace('http://', '').replace('www.', '').split('/')[0] : 'gmail.com';
+        const domain = item.website ? item.website.replace(/https?:\/\/(www\.)?/, '').split('/')[0] : 'contact.com';
         finalEmail = `info@${domain}`;
       }
 
@@ -109,44 +107,80 @@ export const searchLeads = async (
         ...item,
         email: finalEmail,
         id: Math.random().toString(36).substr(2, 9),
-        rating: mode === 'distressed' ? (2.0 + Math.random() * 2.0) : (3.5 + Math.random() * 1.5),
-        mapsUrl: grounding[index]?.maps?.uri || ''
+        rating: mode === 'distressed' ? (2.5 + Math.random() * 1.5) : (3.8 + Math.random() * 1.2),
+        mapsUrl: grounding[index]?.maps?.uri || `https://www.google.com/maps/search/${encodeURIComponent(item.name + ' ' + item.city)}`
       };
     });
   } catch (e) {
-    console.error("Failed to parse leads JSON", e);
+    console.error("Failed to parse leads JSON. Raw output was:", structurer.text);
     return [];
   }
 };
 
-export const generateTailoredEmail = async (lead: BusinessLead): Promise<{ hook: string, subject: string, body: string }> => {
-  const ai = new GoogleGenAI({ apiKey: API_KEY! });
-  const response = await ai.models.generateContent({
+export const analyzeCompetitorUrl = async (url: string): Promise<BusinessLead> => {
+  if (!API_KEY) throw new Error("API Key is missing.");
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  
+  const searchResponse = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: `Write a high-converting cold email for ${lead.name} (${lead.industry} in ${lead.city}).
-    Context:
-    - Their identified gap is: "${lead.gap}"
-    - They have been in business: "${lead.yearsInBusiness}"
-    
-    Instructions:
-    1. "subject": Short, lowercase, casual (e.g. "question about [domain]" or "quick question").
-    2. "hook": The first sentence/paragraph. Must be a specific observation about their ${lead.gap} or reputation. NO FLUFF.
-    3. "body": The full email script. It should Start with the hook, then explain the implication of the gap (the problem), then offer a specific value-add or fix (the solution), then a soft CTA (e.g. "Mind if I send a video?"). Keep it under 150 words.
-    
-    Return ONLY JSON. Schema: { "subject": string, "hook": string, "body": string }`,
+    contents: `Analyze ${url}. Identify business name, industry, and location. Look for technical flaws like slow speed, poor SEO, or old tech stack.`,
+    config: { tools: [{ googleSearch: {} }] }
+  });
+
+  const analysisResponse = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: `Based on this research: "${searchResponse.text}", provide a technical audit for ${url} in JSON.
+    Include scores (0-100) for mobileScore, seoScore, and speedScore. List criticalIssues and techStack.`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
         properties: {
-            subject: { type: Type.STRING },
-            hook: { type: Type.STRING },
-            body: { type: Type.STRING }
+          name: { type: Type.STRING },
+          industry: { type: Type.STRING },
+          city: { type: Type.STRING },
+          gap: { type: Type.STRING },
+          yearsInBusiness: { type: Type.STRING },
+          recommendedServices: { type: Type.ARRAY, items: { type: Type.STRING } },
+          analysisReport: {
+            type: Type.OBJECT,
+            properties: {
+              mobileScore: { type: Type.NUMBER },
+              seoScore: { type: Type.NUMBER },
+              speedScore: { type: Type.NUMBER },
+              techStack: { type: Type.ARRAY, items: { type: Type.STRING } },
+              criticalIssues: { type: Type.ARRAY, items: { type: Type.STRING } }
+            }
+          }
         },
-        required: ["subject", "hook", "body"]
+        required: ["name", "industry", "city", "gap", "analysisReport"]
       }
     }
   });
+
+  const data = JSON.parse(extractJson(analysisResponse.text || "{}"));
+
+  return {
+    ...data,
+    website: url,
+    id: Math.random().toString(36).substr(2, 9),
+    rating: 0,
+    address: 'N/A',
+    latitude: 0,
+    longitude: 0,
+    personalizedHook: `I noticed some technical vulnerabilities on ${url}, specifically with ${data.analysisReport.criticalIssues[0] || 'your mobile optimization'}.`
+  };
+};
+
+export const generateTailoredEmail = async (lead: BusinessLead): Promise<{ hook: string, subject: string, body: string }> => {
+  if (!API_KEY) throw new Error("API Key is missing.");
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: `Write a cold email for ${lead.name}. Gap: ${lead.gap}. Duration: ${lead.yearsInBusiness}. 
+    Format: { "subject": string, "hook": string, "body": string }. Keep it casual and short.`,
+    config: { responseMimeType: "application/json" }
+  });
   
-  return JSON.parse(response.text);
+  return JSON.parse(extractJson(response.text || "{}"));
 };
